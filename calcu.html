@@ -1,0 +1,384 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Modern Calculator</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+
+        body {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            padding: 20px;
+        }
+
+        .calculator {
+            background-color: #1a1a1a;
+            border-radius: 20px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+            width: 320px;
+            overflow: hidden;
+            transition: transform 0.3s ease;
+        }
+
+        .calculator:hover {
+            transform: translateY(-5px);
+        }
+
+        .display {
+            background-color: #252525;
+            color: white;
+            padding: 30px 20px;
+            text-align: right;
+            position: relative;
+        }
+
+        .previous-operand {
+            font-size: 1.2rem;
+            color: #a0a0a0;
+            min-height: 24px;
+            margin-bottom: 5px;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .current-operand {
+            font-size: 2.5rem;
+            font-weight: 300;
+            min-height: 50px;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .buttons {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 1px;
+            background-color: #333;
+        }
+
+        button {
+            border: none;
+            background-color: #2a2a2a;
+            color: white;
+            font-size: 1.3rem;
+            font-weight: bold; /* Make all buttons bold */
+            padding: 20px 0;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            outline: none;
+        }
+
+        button:hover {
+            background-color: #3a3a3a;
+        }
+
+        button:active {
+            background-color: #4a4a4a;
+            transform: scale(0.95);
+        }
+
+        .operator {
+            background-color: #ff9500;
+            color: white;
+        }
+
+        .operator:hover {
+            background-color: #ffaa33;
+        }
+
+        .operator:active {
+            background-color: #ffbb55;
+        }
+
+        .equals {
+            background-color: #ff9500;
+            color: white;
+        }
+
+        .equals:hover {
+            background-color: #ffaa33;
+        }
+
+        .equals:active {
+            background-color: #ffbb55;
+        }
+
+        .clear, .all-clear {
+            background-color: #a6a6a6;
+            color: #1a1a1a;
+        }
+
+        .clear:hover, .all-clear:hover {
+            background-color: #b6b6b6;
+        }
+
+        .clear:active, .all-clear:active {
+            background-color: #c6c6c6;
+        }
+
+        .zero {
+            grid-column: span 2;
+        }
+
+        /* Animation for button press */
+        @keyframes buttonPress {
+            0% { transform: scale(1); }
+            50% { transform: scale(0.95); }
+            100% { transform: scale(1); }
+        }
+
+        .pressed {
+            animation: buttonPress 0.2s ease;
+        }
+
+        /* Responsive design */
+        @media (max-width: 400px) {
+            .calculator {
+                width: 100%;
+                max-width: 320px;
+            }
+            
+            button {
+                padding: 18px 0;
+                font-size: 1.2rem;
+            }
+            
+            .current-operand {
+                font-size: 2.2rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="calculator">
+        <div class="display">
+            <div class="previous-operand"></div>
+            <div class="current-operand">0</div>
+        </div>
+        <div class="buttons">
+            <button class="all-clear">AC</button>
+            <button class="clear">C</button>
+            <button class="operator" data-operation="%">%</button>
+            <button class="operator" data-operation="/">÷</button>
+            
+            <button class="number" data-number="7">7</button>
+            <button class="number" data-number="8">8</button>
+            <button class="number" data-number="9">9</button>
+            <button class="operator" data-operation="*">×</button>
+            
+            <button class="number" data-number="4">4</button>
+            <button class="number" data-number="5">5</button>
+            <button class="number" data-number="6">6</button>
+            <button class="operator" data-operation="-">−</button>
+            
+            <button class="number" data-number="1">1</button>
+            <button class="number" data-number="2">2</button>
+            <button class="number" data-number="3">3</button>
+            <button class="operator" data-operation="+">+</button>
+            
+            <button class="number zero" data-number="0">0</button>
+            <button class="number" data-number=".">.</button>
+            <button class="equals">=</button>
+        </div>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const calculator = {
+                displayValue: '0',
+                firstOperand: null,
+                waitingForSecondOperand: false,
+                operator: null,
+                previousOperand: '',
+            };
+
+            const currentOperandElement = document.querySelector('.current-operand');
+            const previousOperandElement = document.querySelector('.previous-operand');
+
+            function updateDisplay() {
+                currentOperandElement.textContent = calculator.displayValue;
+                previousOperandElement.textContent = calculator.previousOperand;
+            }
+
+            function inputDigit(digit) {
+                const { displayValue, waitingForSecondOperand } = calculator;
+
+                if (waitingForSecondOperand === true) {
+                    calculator.displayValue = digit;
+                    calculator.waitingForSecondOperand = false;
+                } else {
+                    calculator.displayValue = displayValue === '0' ? digit : displayValue + digit;
+                }
+            }
+
+            function inputDecimal(dot) {
+                if (calculator.waitingForSecondOperand === true) {
+                    calculator.displayValue = '0.';
+                    calculator.waitingForSecondOperand = false;
+                    return;
+                }
+
+                if (!calculator.displayValue.includes(dot)) {
+                    calculator.displayValue += dot;
+                }
+            }
+
+            function handleOperator(nextOperator) {
+                const { firstOperand, displayValue, operator } = calculator;
+                const inputValue = parseFloat(displayValue);
+
+                if (operator && calculator.waitingForSecondOperand) {
+                    calculator.operator = nextOperator;
+                    calculator.previousOperand = `${firstOperand} ${nextOperator}`;
+                    return;
+                }
+
+                if (firstOperand === null && !isNaN(inputValue)) {
+                    calculator.firstOperand = inputValue;
+                } else if (operator) {
+                    const result = calculate(firstOperand, inputValue, operator);
+
+                    calculator.displayValue = `${parseFloat(result.toFixed(7))}`;
+                    calculator.firstOperand = result;
+                }
+
+                calculator.waitingForSecondOperand = true;
+                calculator.operator = nextOperator;
+                calculator.previousOperand = `${calculator.displayValue} ${nextOperator}`;
+            }
+
+            function calculate(firstOperand, secondOperand, operator) {
+                switch (operator) {
+                    case '+':
+                        return firstOperand + secondOperand;
+                    case '-':
+                        return firstOperand - secondOperand;
+                    case '*':
+                        return firstOperand * secondOperand;
+                    case '/':
+                        return firstOperand / secondOperand;
+                    case '%':
+                        return firstOperand % secondOperand;
+                    default:
+                        return secondOperand;
+                }
+            }
+
+            function resetCalculator() {
+                calculator.displayValue = '0';
+                calculator.firstOperand = null;
+                calculator.waitingForSecondOperand = false;
+                calculator.operator = null;
+                calculator.previousOperand = '';
+            }
+
+            function clearEntry() {
+                // Modified to work as backspace - remove last digit
+                if (calculator.displayValue.length > 1) {
+                    calculator.displayValue = calculator.displayValue.slice(0, -1);
+                } else {
+                    calculator.displayValue = '0';
+                }
+            }
+
+            function handleButtonClick(event) {
+                const { target } = event;
+                
+                if (!target.matches('button')) {
+                    return;
+                }
+
+                // Add animation
+                target.classList.add('pressed');
+                setTimeout(() => {
+                    target.classList.remove('pressed');
+                }, 200);
+
+                if (target.classList.contains('operator')) {
+                    handleOperator(target.dataset.operation);
+                    updateDisplay();
+                    return;
+                }
+
+                if (target.classList.contains('number')) {
+                    if (target.dataset.number === '.') {
+                        inputDecimal(target.dataset.number);
+                    } else {
+                        inputDigit(target.dataset.number);
+                    }
+                    updateDisplay();
+                    return;
+                }
+
+                if (target.classList.contains('all-clear')) {
+                    resetCalculator();
+                    updateDisplay();
+                    return;
+                }
+
+                if (target.classList.contains('clear')) {
+                    clearEntry();
+                    updateDisplay();
+                    return;
+                }
+
+                if (target.classList.contains('equals')) {
+                    if (calculator.operator && !calculator.waitingForSecondOperand) {
+                        const inputValue = parseFloat(calculator.displayValue);
+                        const result = calculate(calculator.firstOperand, inputValue, calculator.operator);
+                        
+                        calculator.displayValue = `${parseFloat(result.toFixed(7))}`;
+                        calculator.previousOperand = `${calculator.firstOperand} ${calculator.operator} ${inputValue} =`;
+                        calculator.firstOperand = null;
+                        calculator.waitingForSecondOperand = false;
+                        calculator.operator = null;
+                        updateDisplay();
+                    }
+                    return;
+                }
+            }
+
+            // Add event listeners
+            document.querySelector('.buttons').addEventListener('click', handleButtonClick);
+
+            // Keyboard support
+            document.addEventListener('keydown', function(event) {
+                const key = event.key;
+                
+                if (/[0-9]/.test(key)) {
+                    inputDigit(key);
+                    updateDisplay();
+                } else if (key === '.') {
+                    inputDecimal(key);
+                    updateDisplay();
+                } else if (key === '+' || key === '-' || key === '*' || key === '/') {
+                    handleOperator(key);
+                    updateDisplay();
+                } else if (key === 'Enter' || key === '=') {
+                    event.preventDefault();
+                    document.querySelector('.equals').click();
+                } else if (key === 'Escape' || key === 'Delete') {
+                    resetCalculator();
+                    updateDisplay();
+                } else if (key === 'Backspace') {
+                    clearEntry();
+                    updateDisplay();
+                }
+            });
+
+            // Initialize display
+            updateDisplay();
+        });
+    </script>
+</body>
+</html>
